@@ -59,7 +59,7 @@ var files, dict,
                 ? content
                 : objToStr(content)
             );
-        }); 
+        });
     },
 
     /**
@@ -69,7 +69,7 @@ var files, dict,
     sendBeacon = function (content) {
         var options, req,
             beacon = program.beacon,
-            
+
             // request callback (response)
             response = function (res) {
                 if (program.verbose) {
@@ -89,7 +89,7 @@ var files, dict,
                     prettyPrint(content);
                 }
             };
-        
+
         // normalize beacon url
         if (beacon.indexOf('http') !== 0) {
             prefix = 'http:';
@@ -101,7 +101,7 @@ var files, dict,
 
         // set request options
         options = {
-            host: beacon.hostname, 
+            host: beacon.hostname,
             port: beacon.port || 80,
             path: beacon.pathname + (beacon.search || ''),
             method: 'POST',
@@ -111,7 +111,7 @@ var files, dict,
             }
         };
 
-        // build request 
+        // build request
         req = http.request(options, response);
 
         // report errors
@@ -140,7 +140,7 @@ var files, dict,
             if (dict) {
                 content.dictionary = dict;
             }
-            
+
             if (program.beacon) {
                 sendBeacon(objToStr(content));
             } else {
@@ -150,7 +150,7 @@ var files, dict,
             showError(err);
         }
     },
-    
+
     /**
      * Read and parse HAR file
      * @param {Error} err
@@ -172,6 +172,29 @@ var files, dict,
         runYSlow(har);
     };
 
+// Implement a bare minimum preferences object to be able to use custom CDN URLs
+function Preferences() {
+    this.prefs = {};
+}
+Preferences.prototype.getPref = function (name, defaultValue) {
+    return this.prefs.hasOwnProperty(name) ? this.prefs[name] : defaultValue;
+};
+Preferences.prototype.setPref = function (name, value) {
+    this.prefs[name] = value;
+};
+Preferences.prototype.deletePref = function (name) {
+    delete this.prefs[name];
+};
+Preferences.prototype.getPrefList = function (branch_name, default_value) {
+    var values = [], key;
+    for (key in this.prefs) {
+        if (this.prefs.hasOwnProperty(key) && key.indexOf(branch_name) === 0) {
+            values.push({ 'name': key, 'value': this.prefs[key] });
+        }
+    }
+    return values.length === 0 ? default_value : values;
+};
+
 // command line
 program
     .version(YSLOW.version)
@@ -181,6 +204,8 @@ program
     .option('-r, --ruleset <ruleset>', 'specify the YSlow performance ruleset to be used (ydefault|yslow1|yblog) [ydefault]', 'ydefault')
     .option('-b, --beacon <url>', 'specify an URL to log the results')
     .option('-d, --dict', 'include dictionary of results fields')
+    .option('--cdns <cdns>', 'specify comma separated list of additional CDNs')
+    .option('--ranges <ranges>', 'specify comma separated list of additional CDN IP ranges (in CIDR format)')
     .option('-v, --verbose', 'output beacon response information')
     .on('--help', function () {
         var n = program.name;
@@ -189,6 +214,7 @@ program
             '  Examples:',
             '',
             '    ' + n + ' file.har',
+            '    ' + n + ' --cdns "mycdn.tld,mycdn2.tld" --ranges "192.0.0.0/24,172.16.0.0/12" file.har',
             '    ' + n + ' -i grade -f xml -b http://server.com/beacon file1.har file2.har',
             '    ' + n + ' --info all --format plain /tmp/*.har',
             '    ' + n + ' -i basic --rulseset yslow1 -d < file.har',
@@ -201,6 +227,11 @@ program
         ].join('\n'));
     });
 program.parse(process.argv);
+
+preferences = new Preferences();
+preferences.setPref('cdnHostnames', program.cdns);
+preferences.setPref('cdnIPRanges', program.ranges);
+util.Preference.registerNative(preferences);
 
 // dictionary
 if (program.dict && program.format !== 'plain') {

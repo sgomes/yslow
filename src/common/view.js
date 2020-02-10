@@ -279,9 +279,9 @@ YSLOW.view.prototype = {
             // nasty :-P
             text = text.replace(/<li>Tools[^<]+<\/li>/, '');
         }
-        
+
         sHtml = '<div id="splashDiv">' + '<div id="splashDivCenter">' + '<b id="splashImg" width="250" height="150" alt="splash image" ></b>' + '<div id="left"><h2>' + title + '</h2>' + '<div id="content" class="padding50"><h3>' + header + '</h3><ul id="splashBullets">' + text + '</ul>';
-        
+
         if (typeof hideAutoRun !== 'undefined') {
             YSLOW.hideAutoRun = hideAutoRun;
         } else {
@@ -294,7 +294,7 @@ YSLOW.view.prototype = {
             }
             sHtml += '> Autorun YSlow each time a web page is loaded</label>';
         }
-        
+
         if (typeof showAntiIframe !== 'undefined') {
             YSLOW.showAntiIframe = showAntiIframe;
         } else {
@@ -303,7 +303,7 @@ YSLOW.view.prototype = {
         if (showAntiIframe) {
             sHtml += '<label><input type="checkbox" onclick="javascript:document.ysview.setAntiIframe(this.checked)"> Check here if the current page prevents itself from being embedded/iframed. A simpler post onload detection will be used instead.</label>';
         }
-        
+
         sHtml += '<div id="runtestDiv"><button id="runtest-btn" onclick="javascript:document.ysview.runTest()">Run Test</button></div></div><div class="footer"><div class="moreinfo">' + '<a href="javascript:document.ysview.openLink(\'https://yslow.org/\');"><b>&#187;</b>' + more_info_text + '</a></div></div></div></div></div>';
 
         this.addButtonView('panel_about', sHtml);
@@ -704,7 +704,7 @@ YSLOW.view.prototype = {
             el = panel.getElementById('tab-label-list'),
             lis = el.getElementsByTagName('li'),
             len = lis.length;
-        
+
         if (cdns) {
             cdns = cdns.replace(/\s+/g, '').split(',');
             cdns.push(cdn);
@@ -713,6 +713,50 @@ YSLOW.view.prototype = {
             cdns = cdn;
         }
         pref.setPref('extensions.yslow.cdnHostnames', cdns);
+
+        // get selected tab
+        for (i = 0; i < len; i+= 1) {
+            el = lis[i];
+            if (el.className.indexOf('selected') > -1) {
+                id = el.id;
+                break;
+            }
+        }
+        // re-run analysis
+        YSLOW.controller.lint(ctx.document, ctx);
+        that.addButtonView('ysPerfButton', ctx.genPerformance('html'));
+        // update score in status bar.
+        YSLOW.view.restoreStatusBar(ctx);
+        that.updateToolbarSelection();
+        // move tab
+        el = panel.getElementById(id);
+        that.onclickTabLabel({currentTarget: el}, true);
+    },
+
+    /**
+     * Add a custom IP range to custom CDN IP range preference list
+     * @param {string} the range to be added
+     */
+    addIPRange: function (range) {
+        var i, id,
+            that = this,
+            doc = document,
+            ctx = that.yscontext,
+            pref = YSLOW.util.Preference,
+            ranges = pref.getPref('cdnIPRanges', ''),
+            panel = that.panel_doc,
+            el = panel.getElementById('tab-label-list'),
+            lis = el.getElementsByTagName('li'),
+            len = lis.length;
+
+        if (ranges) {
+            ranges = ranges.replace(/\s+/g, '').split(',');
+            ranges.push(range);
+            ranges = ranges.join();
+        } else {
+            ranges = range;
+        }
+        pref.setPref('extensions.yslow.cdnIPRanges', ranges);
 
         // get selected tab
         for (i = 0; i < len; i+= 1) {
@@ -1083,8 +1127,8 @@ YSLOW.view.prototype = {
      * Open link in a popup window
      * @param {String} url URL of the page to be opened.
      * @param {String} name (optional) the window name.
-     * @param {Number} width (optional) the popup window width. 
-     * @param {Number} height (optional) the popup window height. 
+     * @param {Number} width (optional) the popup window width.
+     * @param {Number} height (optional) the popup window height.
      */
     openPopup: function (url, name, width, height, features) {
         window.open(url, name || '_blank', 'width=' + (width || 626) +
@@ -1470,6 +1514,7 @@ YSLOW.view.prototype = {
         "onclickRuleset": "rw",
         "createRuleset": "rw",
         "addCDN": "rw",
+        "addIPRange": "rw",
         "closeDialog": "rw",
         "setAutorun": "rw",
         "setAntiIframe": "rw",

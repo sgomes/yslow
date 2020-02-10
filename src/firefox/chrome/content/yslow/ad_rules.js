@@ -254,6 +254,13 @@ YSLOW.registerRule({
             message += '<p>You can specify CDN hostnames in your preferences. See <a href="javascript:document.ysview.openLink(\'http://developer.yahoo.com/yslow/faq.html#faq_cdn\')">YSlow FAQ</a> for details.</p>';
         }
 
+        user_ranges = YSLOW.util.Preference.getPref("cdnIPRanges", "");
+        if (user_ranges && user_ranges.length > 0) {
+            message += '<p>Using these CDN hostnames from your preferences: ' + user_ranges + '</p>';
+        } else {
+            message += '<p>You can specify CDN hostnames in your preferences, in CIDR format.';
+        }
+
         return {
             score: (comps.length > 0 ? (score >= 0 ? score : 0) : -1),
             message: message,

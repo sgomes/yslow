@@ -11,12 +11,14 @@
  */
 YSLOW.Component.prototype.setComponentDetails = function (o) {
     var comp = this,
-        
+
         parseEntry = function (entry) {
             var i, header, cookie, len,
                 response = entry.response,
-                request = entry.request;
+                request = entry.request
+                ip = entry._ip_addr;
 
+            comp.ip = ip;
             // copy from the response object
             comp.status = response.status;
             comp.headers = {};
@@ -39,8 +41,8 @@ YSLOW.Component.prototype.setComponentDetails = function (o) {
                 comp.body = {
                     toString: function () {return '';},
                     length: response.content.size || 0
-                };  
-            }   
+                };
+            }
             // for security checking
             comp.response_type = comp.type;
             comp.cookie = (comp.headers['set-cookie'] || '') + (comp.req_headers['cookie'] || '');

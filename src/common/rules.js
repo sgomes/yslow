@@ -6,6 +6,55 @@
 /*global YSLOW*/
 /*jslint white: true, onevar: true, undef: true, nomen: true, regexp: true, continue: true, plusplus: true, bitwise: true, newcap: true, type: true, unparam: true, maxerr: 50, indent: 4*/
 
+// Copied with slight modifications from https://github.com/afair/cidr-address.js
+function CidrAddress(cidr) {
+    if (!cidr) throw "Missing CIDR Address";
+    let addrBits = cidr.split("/");
+    this.bits = parseInt(addrBits[1]);
+    if (addrBits[0].indexOf(":")>=0) {
+        this.family = 6;
+        this.size = trackBits || 64;
+        this.address = this.ipv6ToBinary(addrBits[0]);
+    } else {
+        this.family = 4;
+        this.size = 32;
+        this.address = this.ipv4ToBinary(addrBits[0]);
+    }
+    this.min = this.address.substr(0,this.bits).padEnd(this.size,'0');
+    this.max = this.address.substr(0,this.bits).padEnd(this.size,'1');
+}
+
+CidrAddress.prototype.has = function(ip) {
+    if (this.family === 4) {
+        if (ip.indexOf(".")===-1) return false;
+        let bin = this.ipv4ToBinary(ip);
+        return bin >= this.min && bin <= this.max;
+    } else {
+        if (ip.indexOf(":")===-1) return false;
+        let bin = this.ipv6ToBinary(ip);
+        return bin >= this.min && bin <= this.max;
+    }
+}
+
+CidrAddress.prototype.ipv4ToBinary = function(ip) {
+    let bin = "";
+    for (let i of ip.split(".")) {
+      if (!i.match(/^\d{1,3}$/) || parseInt(i)>255) return "0".repeat(this.size)
+      bin = bin + parseInt(i).toString(2).padStart(8,'0');
+    }
+    return bin.padEnd(this.size, '0');
+}
+
+CidrAddress.prototype.ipv6ToBinary = function(ip) {
+    let bin = "";
+    for (let i of ip.split(":")) {
+      if (i === '') i = '0';
+      if (!i.match(/^[\da-f]{0,4}$/)) return "0".repeat(this.size)
+      bin = bin + parseInt(i,16).toString(2).padStart(16,'0');
+    }
+    return bin.padEnd(this.size, '0');
+}
+
 /**
  *
  * Example of a rule object:
@@ -149,6 +198,7 @@ YSLOW.registerRule({
             docDomain = getHostname(cset.doc_comp.url),
             comps = cset.getComponentsByType(config.types),
             userCdns = util.Preference.getPref('cdnHostnames', ''),
+            userRanges = util.Preference.getPref('cdnIPRanges', ''),
             hasPref = util.Preference.nativePref;
 
         // array of custom cdns
@@ -156,11 +206,17 @@ YSLOW.registerRule({
             userCdns = userCdns.split(',');
         }
 
+        // array of custom IP ranges
+        if (userRanges) {
+            userRanges = userRanges.split(',');
+        }
+
         for (i = 0, len = comps.length; i < len; i += 1) {
             comp = comps[i];
             url = comp.url;
             hostname = getHostname(url);
             headers = comp.headers;
+            ip = comp.ip;
 
             // ignore /favicon.ico
             if (comp.type === 'favicon' && hostname === docDomain) {
@@ -187,6 +243,17 @@ YSLOW.registerRule({
                 for (j = 0, lenJ = userCdns.length; j < lenJ; j += 1) {
                     re = new RegExp(util.trim(userCdns[j]));
                     if (re.test(hostname)) {
+                        match = 1;
+                        break;
+                    }
+                }
+            }
+
+            // by custom IP ranges
+            if (userRanges) {
+                for (j = 0, lenJ = userRanges.length; j < lenJ; j += 1) {
+                    var cidr = new CidrAddress(userRanges[j]);
+                    if (ip && cidr.has(ip)) {
                         match = 1;
                         break;
                     }
@@ -248,6 +315,14 @@ YSLOW.registerRule({
                 'preferences. See <a href="javascript:document.ysview.' +
                 'openLink(\'http://yslow.org/faq/#faq_cdn\')">YSlow FAQ</a> ' +
                 'for details.</p>';
+        }
+
+        if (userRanges) {
+            message += '<p>Using these CDN IP ranges from your preferences: ' +
+                userRanges + '</p>';
+        } else {
+            message += '<p>You can specify CDN IP ranges in your ' +
+                'preferences, in CIDR format.';
         }
 
         // list unique domains only to avoid long list of offenders

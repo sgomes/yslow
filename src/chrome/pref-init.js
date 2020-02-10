@@ -16,7 +16,8 @@
             {'name': 'extensions.yslow.excludeAfterOnload', 'value': true},
             {'name': 'extensions.yslow.smushItURL', 'value': 'http://www.smushit.com/ysmush.it'},
             {'name': 'extensions.yslow.minFutureExpiresSeconds', 'value': 172800},
-            {'name': 'extensions.yslow.cdnHostnames', 'value': ''}
+            {'name': 'extensions.yslow.cdnHostnames', 'value': ''},
+            {'name': 'extensions.yslow.cdnIPRanges', 'value': ''}
         ];
 
     for (i = 0, len = items.length; i < len; i += 1) {

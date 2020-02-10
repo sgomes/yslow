@@ -21,5 +21,6 @@ pref("extensions.yslow.smushItURL", "http://www.smushit.com/ysmush.it");
 
 pref("extensions.yslow.minFutureExpiresSeconds", 172800); // 2days
 pref("extensions.yslow.cdnHostnames", "");
+pref("extensions.yslow.cdnIPRanges", "");
 
 pref("extensions.yslow.allowNegativeScore", false);
